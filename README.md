@@ -4,12 +4,12 @@ Norgberg is the database services module for [Neorg](https://github.com/nvim-neo
 
 Norgberg serves two purposes.
 
-1. It is a fast structured data cache for the information in and between notes of a neorg workspace, storing properties like metadata headers, link resolutions, tasks and other structured data in the neorg standard for fast querying by other modules such as Zettelkasten and GTD.
-2. It is a state storage service that can be used by Neorg modudles to persist information, for purposes such as synchronisation between devices, or holding module information.
+1. It is a fast structured data cache for the information in and between notes of a neorg workspace, storing properties like metadata headers, link resolutions, tasks and other structured data in the neorg standard for fast querying by other modules such as Zettelkasten and Getting Things Done (GTD).
+2. It is a state storage service that can be used by Neorg modules to persist information, for purposes such as synchronisation between devices, or holding module information.
 
 Norgberg thus provides services found in other linked notes applications, as well as some utility beyond.
 
-Norgberg is ment to be a moduar services for modules plugging into the Neorg ecosystem - we explicitly want other modules to store their information in one common database service that is provided for all.
+Norgberg is ment to be a modular services for modules plugging into the Neorg ecosystem - we explicitly want other modules to store their information in one common database service that is provided for all.
 
 ## Core design
 
