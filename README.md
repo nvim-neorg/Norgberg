@@ -23,9 +23,7 @@ Long-term, we aim to introduce the caching of neorg files data in a graph databa
 
 ### Interface
 
-Norgberg exposes its services both through a native Rust API and Lua FFI bindings. These communicate with the core Norgberg service internally. The database is set up and managed by its own core module; other modules consume the service. The goal is to have the database start up and stop together with the rest of Neorg core, as an embedded system.
-
-We are aiming to design the overall system thusly that users can install new modules using the database with little effort like full-on recompilations.
+Norgberg runs as a module of the [Norgopolis common backend server](https://github.com/SevorisDoe/Norgberg). It conforms to the Norgopolis RPC standard. Methods exposed by Norgberg can be called via the common RPC router from other modules or via gRPC frontends in your application or script, as long as the method name is available and the mpack deserializes to matche the method arguments.
 
 ### Cookie system
 
