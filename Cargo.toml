@@ -6,7 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel = "2.1.0"
+anyhow = "1.0.71"
+diesel = { version = "2.1.0", features = ["sqlite", "r2d2"] }
 norgopolis-module = "0.1.0"
 tokio = { version = "1.29.1", features = ["rt-multi-thread", "macros", "process", "io-std"] }
 tokio-stream = "0.1.14"
