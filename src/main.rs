@@ -9,7 +9,6 @@ use norgopolis_module::{
 use tokio_stream::wrappers::ReceiverStream;
 
 struct Norgberg {
-    // TODO: Add connection handle
     connection: Pool<ConnectionManager<SqliteConnection>>,
 }
 
