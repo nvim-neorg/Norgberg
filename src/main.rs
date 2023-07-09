@@ -39,21 +39,17 @@ impl Service for Norgberg {
 
 #[tokio::main]
 async fn main() {
-    Module::start(Norgberg::new(Path::new(":memory:")).expect("Unable to connect to database!"))
+    let database_location = if cfg!(debug_assertions) {
+        Path::new(":memory:").to_owned()
+    } else {
+        let data_dir = directories::ProjectDirs::from("org", "neorg", "norgberg").expect("Could not grab known data directories, are you running on a non-unix and non-windows system?").data_dir().to_path_buf();
+
+        let _ = std::fs::create_dir_all(&data_dir);
+
+        data_dir.join("database.sql")
+    };
+
+    Module::start(Norgberg::new(&database_location).expect("Unable to connect to database!"))
         .await
         .unwrap()
-}
-
-#[cfg(Release)]
-#[tokio::main]
-async fn main() {
-    let data_dir = directories::ProjectDirs::from("org", "neorg", "norgberg").expect("Could not grab known data directories, are you running on a non-unix and non-windows system?").data_dir().to_path_buf();
-
-    let _ = std::fs::create_dir_all(&data_dir);
-
-    Module::start(
-        Norgberg::new(&data_dir.join("database.sql")).expect("Unable to connect to database!"),
-    )
-    .await
-    .unwrap()
 }
