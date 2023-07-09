@@ -39,7 +39,7 @@ impl Service for Norgberg {
 
 #[tokio::main]
 async fn main() {
-    Module::start(Norgberg::new(&Path::new(":memory:")).expect("Unable to connect to database!"))
+    Module::start(Norgberg::new(Path::new(":memory:")).expect("Unable to connect to database!"))
         .await
         .unwrap()
 }
