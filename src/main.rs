@@ -1,25 +1,21 @@
-use anyhow::{anyhow, Result};
-use diesel::{
-    r2d2::{ConnectionManager, Pool},
-    sqlite::SqliteConnection,
-};
+use anyhow::Result;
 use norgopolis_module::{
     invoker_service::Service, module_communication::MessagePack, Module, Status,
 };
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tokio_stream::wrappers::ReceiverStream;
 
+use surrealdb::engine::any::{connect, Any as AnySurrealConnection};
+use surrealdb::Surreal;
+
 struct Norgberg {
-    connection: Pool<ConnectionManager<SqliteConnection>>,
+    connection: Surreal<AnySurrealConnection>,
 }
 
 impl Norgberg {
-    fn new(file: &Path) -> Result<Self> {
+    async fn new(file: &PathBuf) -> Result<Self> {
         Ok(Norgberg {
-            connection: Pool::builder().build(ConnectionManager::new(
-                file.to_str()
-                    .ok_or_else(|| anyhow!("Invalid unicode in path!"))?,
-            ))?,
+            connection: connect(file.to_str().unwrap_or("memory")).await?,
         })
     }
 }
@@ -40,7 +36,7 @@ impl Service for Norgberg {
 #[tokio::main]
 async fn main() {
     let database_location = if cfg!(debug_assertions) {
-        Path::new(":memory:").to_owned()
+        Path::new("memory").to_owned()
     } else {
         let data_dir = directories::ProjectDirs::from("org", "neorg", "norgberg").expect("Could not grab known data directories, are you running on a non-unix and non-windows system?").data_dir().to_path_buf();
 
@@ -49,7 +45,11 @@ async fn main() {
         data_dir.join("database.sql")
     };
 
-    Module::start(Norgberg::new(&database_location).expect("Unable to connect to database!"))
-        .await
-        .unwrap()
+    Module::start(
+        Norgberg::new(&database_location)
+            .await
+            .expect("Unable to connect to database!"),
+    )
+    .await
+    .unwrap()
 }
