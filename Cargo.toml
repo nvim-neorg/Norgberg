@@ -9,6 +9,6 @@ edition = "2021"
 anyhow = "1.0.71"
 directories = "5.0.1"
 norgopolis-module = "0.1.0"
-surrealdb = { version = "1.0.0", features = ["kv-mem"] }
+surrealdb = { version = "1.0.0", features = ["kv-mem", "kv-rocksdb"] }
 tokio = { version = "1.29.1", features = ["rt-multi-thread", "macros", "process", "io-std"] }
 tokio-stream = "0.1.14"
