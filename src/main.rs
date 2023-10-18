@@ -1,6 +1,6 @@
 use anyhow::Result;
 use norgopolis_module::{
-    invoker_service::Service, module_communication::MessagePack, Module, Status,
+    invoker_service::Service, module_communication::MessagePack, Code, Module, Status,
 };
 use std::path::Path;
 use tokio_stream::wrappers::ReceiverStream;
@@ -14,9 +14,20 @@ struct Norgberg {
 
 impl Norgberg {
     async fn new(file: &Path) -> Result<Self> {
-        Ok(Norgberg {
-            connection: connect(file.to_str().unwrap_or("memory")).await?,
-        })
+        let connection = connect(file.to_str().unwrap_or("memory")).await?;
+
+        connection
+            .use_ns("neorg")
+            .use_db("neorg")
+            .await
+            .expect("Failed to connect to db");
+
+        connection
+            .query("DEFINE NAMESPACE neorg; DEFINE DATABASE NEORG;")
+            .await
+            .expect("Unable to create neorg namespace nor db!");
+
+        Ok(Norgberg { connection })
     }
 }
 
@@ -26,10 +37,71 @@ impl Service for Norgberg {
 
     async fn call(
         &self,
-        _fn_name: String,
-        _args: Option<MessagePack>,
+        fn_name: String,
+        args: Option<MessagePack>,
     ) -> Result<Self::Stream, Status> {
-        todo!()
+        let (tx, rx) = tokio::sync::mpsc::channel(8);
+
+        match fn_name.as_str() {
+            "execute-query" => match args {
+                Some(arg) => {
+                    let query = match arg.decode::<String>().map_err(|err| {
+                        Status::new(
+                            Code::InvalidArgument,
+                            "Invalid argument provided! Expected type `string`: ".to_string()
+                                + &err.to_string(),
+                        )
+                    }) {
+                        Ok(val) => val,
+                        Err(err) => {
+                            tx.send(Err(err.clone())).await.unwrap();
+                            return Err(err);
+                        }
+                    };
+
+                    let query_result: Vec<surrealdb::sql::Thing> = match self
+                        .connection
+                        .query(query)
+                        .await
+                        .map_err(|err| Status::new(Code::Aborted, err.to_string()))
+                    {
+                        Ok(mut val) => match val.take(0) {
+                            Ok(val) => val,
+                            Err(_) => {
+                                tx.send(Ok(MessagePack::encode::<Vec<String>>(vec![]).unwrap()))
+                                    .await
+                                    .unwrap();
+                                return Ok(ReceiverStream::new(rx));
+                            }
+                        },
+                        Err(err) => {
+                            tx.send(Err(err.clone())).await.unwrap();
+                            return Err(err);
+                        }
+                    };
+                    let query_result: Vec<String> =
+                        query_result.into_iter().map(|x| x.to_raw()).collect();
+
+                    tx.send(Ok(
+                        MessagePack::encode(query_result).expect("serialization failure")
+                    ))
+                    .await
+                    .unwrap();
+                }
+                None => {
+                    tx.send(Err(Status::new(
+                        Code::InvalidArgument,
+                        "Expected a string as argument, whereas nothing was provided instead.",
+                    )))
+                    .await
+                    .unwrap();
+                }
+            },
+            _ => todo!(),
+            // "execute-live-query" => {},
+        };
+
+        Ok(ReceiverStream::new(rx))
     }
 }
 
@@ -46,7 +118,7 @@ async fn main() {
     };
 
     Module::start(
-        Norgberg::new(&Path::new(&database_location))
+        Norgberg::new(Path::new(&database_location))
             .await
             .expect("Unable to connect to database!"),
     )
