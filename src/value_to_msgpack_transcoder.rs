@@ -26,14 +26,13 @@ fn transcode_value_msgpack(value: &Value) -> rmpv::Value {
         )])),
         Value::Uuid(uuid) => uuid.as_bytes().as_slice().into(),
         Value::Array(array) => array
-            .to_vec()
-            .into_iter()
-            .map(|val| transcode_value_msgpack(&val))
+            .iter()
+            .map(transcode_value_msgpack)
             .collect(),
         Value::Object(object) => rmpv::Value::Map(
             object
                 .iter()
-                .map(|(k, v)| (k.clone().into(), transcode_value_msgpack(&v)))
+                .map(|(k, v)| (k.clone().into(), transcode_value_msgpack(v)))
                 .collect(),
         ),
         Value::Geometry(geometry) => transcode_value_msgpack(&geometry.as_coordinates()),
