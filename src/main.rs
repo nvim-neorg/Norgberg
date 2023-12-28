@@ -4,9 +4,12 @@ use norgopolis_module::{
 };
 use std::path::Path;
 use tokio_stream::wrappers::ReceiverStream;
+use value_to_msgpack_transcoder::value_to_msgpack;
 
 use surrealdb::engine::any::{connect, Any as AnySurrealConnection};
 use surrealdb::Surreal;
+
+mod value_to_msgpack_transcoder;
 
 struct Norgberg {
     connection: Surreal<AnySurrealConnection>,
@@ -59,34 +62,32 @@ impl Service for Norgberg {
                         }
                     };
 
-                    let query_result: Vec<surrealdb::sql::Thing> = match self
+                    match self
                         .connection
                         .query(query)
                         .await
-                        .map_err(|err| Status::new(Code::Aborted, err.to_string()))
+                        .map_err(|err| Status::new(Code::Cancelled, err.to_string()))
                     {
-                        Ok(mut val) => match val.take(0) {
-                            Ok(val) => val,
-                            Err(_) => {
-                                tx.send(Ok(MessagePack::encode::<Vec<String>>(vec![]).unwrap()))
-                                    .await
-                                    .unwrap();
-                                return Ok(ReceiverStream::new(rx));
+                        Ok(mut val) => {
+                            for i in 0..val.num_statements() {
+                                match val.take(i) {
+                                    Ok(val) => {
+                                        tx.send(Ok(value_to_msgpack(&val))).await.unwrap();
+                                    }
+                                    Err(err) => {
+                                        tx.send(Err(Status::new(Code::Cancelled, err.to_string())))
+                                            .await
+                                            .unwrap();
+                                        return Ok(ReceiverStream::new(rx));
+                                    }
+                                }
                             }
-                        },
+                        }
                         Err(err) => {
                             tx.send(Err(err.clone())).await.unwrap();
                             return Err(err);
                         }
                     };
-                    let query_result: Vec<String> =
-                        query_result.into_iter().map(|x| x.to_raw()).collect();
-
-                    tx.send(Ok(
-                        MessagePack::encode(query_result).expect("serialization failure")
-                    ))
-                    .await
-                    .unwrap();
                 }
                 None => {
                     tx.send(Err(Status::new(
