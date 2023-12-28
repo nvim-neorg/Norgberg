@@ -3,21 +3,21 @@ use norgopolis_module::{
     invoker_service::Service, module_communication::MessagePack, Code, Module, Status,
 };
 use std::path::Path;
+use surrealdb::engine::local::{Db, File};
 use tokio_stream::wrappers::ReceiverStream;
 use value_to_msgpack_transcoder::value_to_msgpack;
 
-use surrealdb::engine::any::{connect, Any as AnySurrealConnection};
 use surrealdb::Surreal;
 
 mod value_to_msgpack_transcoder;
 
 struct Norgberg {
-    connection: Surreal<AnySurrealConnection>,
+    connection: Surreal<Db>,
 }
 
 impl Norgberg {
     async fn new(file: &Path) -> Result<Self> {
-        let connection = connect(file.to_str().unwrap_or("memory")).await?;
+        let connection = Surreal::new::<File>(file.to_str().unwrap_or("memory")).await?;
 
         connection
             .use_ns("neorg")
@@ -115,7 +115,7 @@ async fn main() {
 
         let _ = std::fs::create_dir_all(&data_dir);
 
-        "file://".to_string() + data_dir.join("database.sql").to_str().unwrap()
+        data_dir.join("norgberg.db").to_str().unwrap().to_string()
     };
 
     Module::start(

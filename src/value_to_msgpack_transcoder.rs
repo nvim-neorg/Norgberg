@@ -25,10 +25,7 @@ fn transcode_value_msgpack(value: &Value) -> rmpv::Value {
             datetime.timestamp_micros().into(),
         )])),
         Value::Uuid(uuid) => uuid.as_bytes().as_slice().into(),
-        Value::Array(array) => array
-            .iter()
-            .map(transcode_value_msgpack)
-            .collect(),
+        Value::Array(array) => array.iter().map(transcode_value_msgpack).collect(),
         Value::Object(object) => rmpv::Value::Map(
             object
                 .iter()
