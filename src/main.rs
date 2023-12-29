@@ -30,6 +30,40 @@ impl Norgberg {
             .await
             .expect("Unable to create neorg namespace nor db!");
 
+        connection
+            .query(
+                "
+            BEGIN TRANSACTION;
+            IF schema:current != NULL {
+                RETURN;
+            };
+
+            CREATE schema:current SET version = '0.0.1';
+
+            IF !string::is::semver(schema:current.version) {
+                THROW 'Attempted to create schema with invalid semver version!';
+            };
+
+            DEFINE TABLE files SCHEMAFULL;
+            DEFINE INDEX path ON TABLE files COLUMNS path UNIQUE;
+            DEFINE FIELD path ON TABLE files TYPE string;
+            // TODO: DEFINE FIELD metadata
+
+            DEFINE TABLE vFiles SCHEMAFULL;
+            DEFINE INDEX path ON TABLE vFiles COLUMNS path UNIQUE; 
+            DEFINE FIELD path ON TABLE vFiles TYPE string; 
+
+            DEFINE TABLE externalResources SCHEMAFULL;
+            DEFINE INDEX id ON TABLE externalResources COLUMNS id UNIQUE;
+            DEFINE FIELD id ON TABLE externalResources TYPE string;
+            DEFINE FIELD type ON TABLE externalResources TYPE string
+              ASSERT $value INSIDE ['uri', 'file'];
+            COMMIT TRANSACTION;
+        ",
+            )
+            .await
+            .expect("Unable to configure database!");
+
         Ok(Norgberg { connection })
     }
 }
