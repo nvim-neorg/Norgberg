@@ -152,11 +152,12 @@ async fn main() {
         data_dir.join("norgberg.db").to_str().unwrap().to_string()
     };
 
-    Module::start(
-        Norgberg::new(Path::new(&database_location))
-            .await
-            .expect("Unable to connect to database!"),
-    )
-    .await
-    .unwrap()
+    Module::new()
+        .start(
+            Norgberg::new(Path::new(&database_location))
+                .await
+                .expect("Unable to connect to database!"),
+        )
+        .await
+        .unwrap()
 }
